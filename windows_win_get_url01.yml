@@ -1,0 +1,25 @@
+---
+- name: Download resources with win_get_url
+  hosts: windows
+  #connection: winrm   # we already mapped this in our inventory
+
+  vars:
+          nasa_apod: "https://api.nasa.gov/assets/img/general/apod.jpg"
+          destdirectory: "C:\\Users\\{{ ansible_user }}\\Desktop\\nasa\\"
+
+  tasks:
+
+          - name: Ensure Directory exists
+            ansible.windows.win_file:
+              path: "{{ destdirectory }}"
+              state: directory
+
+          - name: Get a fun background graphic
+            ansible.windows.win_get_url:
+                    url: "{{ nasa_apod }}"
+                    dest: "{{ destdirectory }}nasa_apod.jpg"
+ 
+          - name: remove a file
+            ansible.windows.win_file:
+              path: "{{ destdirectory }}nasa_apod.jpg" 
+              state: absent

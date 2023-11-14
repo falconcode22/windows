@@ -1,0 +1,49 @@
+---
+- name: install or update winzip 
+  hosts: windows
+  gather_facts: true
+  connection: winrm
+
+  vars:
+    updating: false     # set this true winzip is already installed and you want to update the solution
+    winzip_url: https://www.7-zip.org/a/7z2301-x64.exe
+    # we can transform the data provided by winzip_url
+
+  tasks:
+
+  - name: ensure a download directory exists
+    ansible.windows.win_file:
+      path: "C:\\Users\\{{ ansible_user }}\\Desktop\\ansible_examples\\"
+      state: directory
+
+  - name: download the notepad++ installer
+    ansible.windows.win_get_url:
+      url: "{{ winzip_url }}"      # path to the notepad++ url
+      dest: "C:\\Users\\{{ ansible_user }}\\Desktop\\ansible_examples\\"
+
+  # ansible.windows.win_package is NOT idempotent for winzip without the "creates_path"
+  # unfortunately, if we want to UPDATE notepad++, and it is already installed, the "creates_path" prevents a second install (i.e. the update)
+  # our hack-around is to let the user pass a variable (updating) where if true, we always attempt to install notepad++
+  - name: select if we are installing or performing a change operation
+    block:
+      - name: installing Winzip
+        ansible.windows.win_package:
+          path: "C:\\Users\\{{ ansible_user }}\\Desktop\\ansible_examples\\{{ winzip_url.split('/')[-1] }}"
+          arguments: '/S'
+          creates_path: 'C:\Program Files\winzip\7z2301-x64.exe'
+          state: present
+        when: ansible_os_family == 'Windows' and not updating|bool   # this is a windows ONLY app
+
+      - name: updating Notepad++
+        ansible.windows.win_package:
+          path: "C:\\Users\\{{ ansible_user }}\\Desktop\\ansible_examples\\{{ winzip_url.split('/')[-1] }}"
+          arguments: '/S'
+          state: present
+        when: ansible_os_family == 'Windows' and updating|bool
+
+  - name: add Notepad++ to Path Variable on Windows hosts
+    ansible.windows.win_path:
+      elements:
+      - 'C:\Program Files\winzip'
+    when: ansible_os_family == 'Windows'
+
