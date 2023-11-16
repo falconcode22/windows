@@ -18,7 +18,7 @@
     #      testing: testing
     #      delete: never
 
-    - name: Remove virtual machine      
+    - name: Remove virtual machine
       azure.azcollection.azure_rm_virtualmachine:
         resource_group: Testing
         name: testvm001
