@@ -1,0 +1,75 @@
+- name: Build the components for an Azure VM
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:    
+    - name: Include vars 
+      include_vars: var0.yml
+      
+    - name: Create a resource group
+      azure.azcollection.azure_rm_resourcegroup:
+        state: present
+        name: "{{ rgname }}"
+        location: "{{ rglocation }}"
+        tags:
+          testing: "{{ tags }}'"
+          delete: never
+
+    - name: Create virtual network
+      azure.azcollection.azure_rm_virtualnetwork:
+        resource_group: "{{ rgname }}"
+        name: "{{ vnname }}"
+        address_prefixes: "{{ VNAddr }}"
+
+    - name: Add subnet
+      azure.azcollection.azure_rm_subnet:
+        resource_group: "{{ rgname }}"
+        name: "{{ subNetname }}"
+        address_prefix: "{{ subNetPrefix }}"
+        virtual_network: "{{ vnname }}"
+
+    - name: Create public ip
+      azure.azcollection.azure_rm_publicipaddress:
+        resource_group: "{{ rgname }}"
+        allocation_method: "{{ publicipallmethos }}"
+        name: "{{ publicipName }}"
+
+    - name: Create security group that allows SSH
+      azure.azcollection.azure_rm_securitygroup:
+        resource_group: "{{ rgname }}"
+        name: "{{ nsgroupname }}"
+        rules:
+          - name: SSH
+            protocol: Tcp
+            destination_port_range: 22
+            access: Allow
+            priority: 101
+            direction: Inbound
+
+    - name: Create NIC
+      azure.azcollection.azure_rm_networkinterface:
+        resource_group: "{{ rgname }}"
+        name: "{{ nicname }}"
+        virtual_network: "{{ vnname }}"
+        subnet: "{{ subNetname }}"
+        public_ip_name: "{{ publicipName }}"
+        security_group: "{{ nsgroupname }}"
+
+    - name: Create virtual machine
+      azure.azcollection.azure_rm_virtualmachine:
+        resource_group: "{{ rgname }}"
+        name: "{{ vmname }}"
+        state: "{{ state }}"
+        vm_size: "{{ vm_size }}"   # for a list see --> https://learn.microsoft.com/en-us/azure/virtual-machines/generation-2
+        managed_disk_type: "{{ managed_disk_type }}"
+        admin_username: "{{ admin_username }}"
+        admin_password: "{{ admin_password }}"
+        network_interfaces: "{{ nicname }}"
+        # for list of images see --> https://az-vm-image.info/
+        image:
+          offer: "{{ imagaeOffer }}"
+          publisher: Debian
+          sku: "{{ sku }}"   # this is a "gen 2 image"
+          version: latest
+
